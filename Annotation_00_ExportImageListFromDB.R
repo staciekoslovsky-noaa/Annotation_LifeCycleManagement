@@ -7,8 +7,9 @@ db_schema <- "surv_jobss"
 db_table <- "tbl_images_4imageList"
 
 ## For filtering images
-altitude_minimum <- 152.4 #in m (500 ft)
-altitude_maximum <- 609.6 #in m (2000 ft)
+altitude_minimum <- 0 #in m (152.4 m = 500 ft)
+altitude_maximum <- 3000 #in m (609.6 m = 2000 ft)
+keep_ir_nuc <- "N" # enter Y or N
 
 ## For defining image list names
 project <- "jobss_2021"
@@ -58,9 +59,9 @@ images <- RPostgreSQL::dbGetQuery(con, sql_code4export)
 images <- images %>%
   filter(ins_altitude >= altitude_minimum,
          ins_altitude <= altitude_maximum,
-         ir_nuc == 'N',
          !is.na(ir_image_name),
          !is.na(rgb_image_name)) %>%
+  filter(if (keep_ir_nuc == "Y") ir_nuc == 'N' | is.na(ir_nuc) else ir_nuc == ir_nuc | is.na(ir_nuc)) %>%  
   select(flight, camera_view, ir_image_path, rgb_image_path) %>%
   mutate(image_list_rgb = paste(project, "_", images$flight, "_", images$camera_view, "_", list_description, "_rgb_images_", run_date, ".txt", sep = ""),
          image_list_ir = paste(project, "_", images$flight, "_", images$camera_view, "_", list_description, "_ir_images_", run_date, ".txt", sep = ""))
