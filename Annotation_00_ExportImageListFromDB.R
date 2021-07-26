@@ -63,8 +63,8 @@ images <- images %>%
          !is.na(rgb_image_name)) %>%
   filter(if (keep_ir_nuc == "Y") ir_nuc == 'N' | is.na(ir_nuc) else ir_nuc == ir_nuc | is.na(ir_nuc)) %>%  
   select(flight, camera_view, ir_image_path, rgb_image_path) %>%
-  mutate(image_list_rgb = paste(project, "_", images$flight, "_", images$camera_view, "_", list_description, "_rgb_images_", run_date, ".txt", sep = ""),
-         image_list_ir = paste(project, "_", images$flight, "_", images$camera_view, "_", list_description, "_ir_images_", run_date, ".txt", sep = ""))
+  mutate(image_list_rgb = paste(project, "_", flight, "_", camera_view, "_", list_description, "_rgb_images_", run_date, ".txt", sep = ""),
+         image_list_ir = paste(project, "_", flight, "_", camera_view, "_", list_description, "_ir_images_", run_date, ".txt", sep = ""))
 
 # Create dataset_manifest.csv: dataset_name, color_image_list, thermal_image_list, transformation_file
 manifest <- images %>%
