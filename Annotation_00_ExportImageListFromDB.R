@@ -15,6 +15,7 @@ keep_ir_nuc <- "N" # enter Y or N
 project <- "jobss_2021"
 list_description <- "batchProcessing"
 run_date <- format(Sys.Date(),"%Y%m%d")
+detectionFileType <- "ground" #either ground, irNUC, or newFromML
 
 ## For assigning transformation files
 transform_C <- "\\\\akc0ss-n086\\NMML_Polar\\ProgramMgmt\\Software\\Seal-TK\\Transformations_2021_JoBSS\\Revised_2021CalibrationFlight\\Otter_RGB-IR_C_100mm_0deg_20210412.h5"
@@ -70,7 +71,7 @@ images <- images %>%
 manifest <- images %>%
   select(flight, camera_view, image_list_rgb, image_list_ir) %>%
   distinct(flight, camera_view, image_list_rgb, image_list_ir) %>%
-  mutate(dataset_name = paste(project, flight, camera_view, sep = "_"),
+  mutate(dataset_name = paste(project, flight, camera_view, detectionFileType, sep = "_"),
          transformation_file = ifelse(camera_view == "C", transform_C,
                                       ifelse(camera_view == "L", transform_L, transform_R))) %>%
   rename(color_image_list = image_list_rgb,
