@@ -17,9 +17,9 @@ list_description <- "batchProcessing"
 run_date <- format(Sys.Date(),"%Y%m%d")
 
 ## For assigning transformation files
-transform_C <- "Otter_RGB-IR_C_100mm_0deg_20210412.h5"
-transform_L <- "Otter_RGB-IR_L_100mm_25deg_20210412.h5"
-transform_R <- "Otter_RGB-IR_R_100mm_25deg_20210412.h5"
+transform_C <- "\\\\akc0ss-n086\\NMML_Polar\\ProgramMgmt\\Software\\Seal-TK\\Transformations_2021_JoBSS\\Revised_2021CalibrationFlight\\Otter_RGB-IR_C_100mm_0deg_20210412.h5"
+transform_L <- "\\\\akc0ss-n086\\NMML_Polar\\ProgramMgmt\\Software\\Seal-TK\\Transformations_2021_JoBSS\\Revised_2021CalibrationFlight\\Otter_RGB-IR_L_100mm_25deg_20210412.h5"
+transform_R <- "\\\\akc0ss-n086\\NMML_Polar\\ProgramMgmt\\Software\\Seal-TK\\Transformations_2021_JoBSS\\Revised_2021CalibrationFlight\\Otter_RGB-IR_R_100mm_25deg_20210412.h5"
 
 ## For exporting image lists and dataset_manifest.csv
 export_directory <- "O:\\Data\\Annotations\\Archive_DetectorInputs"
