@@ -14,7 +14,7 @@ keep_ir_nuc <- "N" # enter Y or N
 ## For defining image list names
 project <- "jobss_2021"
 list_description <- "batchProcessing"
-run_date <- format(Sys.Date(),"%Y%m%d")
+run_date <- "20210726" # formatted as YYYYMMDD
 detectionFileType <- "ground" #either ground, irNUC, or newFromML
 
 ## For assigning transformation files
