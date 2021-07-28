@@ -13,9 +13,9 @@ keep_ir_nuc <- "N" # enter Y or N
 
 ## For defining image list names
 project <- "jobss_2021"
-list_description <- "batchProcessing"
-run_date <- "20210726" # formatted as YYYYMMDD
-detectionFileType <- "ground" #either ground, irNUC, or newFromML
+list_description <- "test"
+run_date <- "20210727" # formatted as YYYYMMDD
+detectionFileType <- "postSurvey" #either postSurvey, irNUC, or newFromML
 
 ## For assigning transformation files
 transform_C <- "\\\\akc0ss-n086\\NMML_Polar\\ProgramMgmt\\Software\\Seal-TK\\Transformations_2021_JoBSS\\Revised_2021CalibrationFlight\\Otter_RGB-IR_C_100mm_0deg_20210412.h5"
@@ -23,7 +23,7 @@ transform_L <- "\\\\akc0ss-n086\\NMML_Polar\\ProgramMgmt\\Software\\Seal-TK\\Tra
 transform_R <- "\\\\akc0ss-n086\\NMML_Polar\\ProgramMgmt\\Software\\Seal-TK\\Transformations_2021_JoBSS\\Revised_2021CalibrationFlight\\Otter_RGB-IR_R_100mm_25deg_20210412.h5"
 
 ## For exporting image lists and dataset_manifest.csv
-export_directory <- "O:\\Data\\Annotations\\Archive_DetectorInputs"
+export_directory <- "O:\\Data\\Annotations"
 export_folder <- paste(project, run_date, list_description, sep = "_")
 
 # Create functions -----------------------------------------------
@@ -44,6 +44,12 @@ install_pkg("tidyverse")
 # Create export folder on network
 export <- paste(export_directory, export_folder, sep = "\\")
 dir.create(export)
+dir.create(paste(export, "01_DetectorOutputs", sep = "\\"))
+dir.create(paste(export, "02_AnnotationFiles_ForProcessing", sep = "\\"))
+dir.create(paste(export, "03_AnnotationFiles_ReviewComplete", sep = "\\"))
+dir.create(paste(export, "04_Corrections", sep = "\\"))
+dir.create(paste(export, "Archive_DetectionFiles", sep = "\\"))
+dir.create(paste(export, "Archive_DetectorInputs", sep = "\\"))
 
 # Connect to DB
 con <- RPostgreSQL::dbConnect(PostgreSQL(), 
@@ -78,7 +84,7 @@ manifest <- images %>%
          thermal_image_list = image_list_ir) %>%
   select(dataset_name, color_image_list, thermal_image_list, transformation_file)
 
-write.csv(manifest, file = paste(export_directory, export_folder, "dataset_manifest.csv", sep = "\\"), row.names = FALSE)
+write.csv(manifest, file = paste(export, "Archive_DetectorInputs", "dataset_manifest.csv", sep = "\\"), row.names = FALSE)
 
 # Export image lists
 image_lists <- manifest %>%
@@ -93,10 +99,9 @@ for (i in 1:nrow(image_lists)){
     filter(image_list_ir == image_lists$thermal_image_list[i]) %>%
     select(ir_image_path)
   
-  write.table(images_rgb, paste(export, image_lists$color_image_list[i], sep = "\\"), row.names = FALSE, col.names = FALSE, quote = FALSE)
-  write.table(images_ir, paste(export, image_lists$thermal_image_list[i], sep = "\\"), row.names = FALSE, col.names = FALSE, quote = FALSE)
+  write.table(images_rgb, paste(export, "Archive_DetectorInputs", image_lists$color_image_list[i], sep = "\\"), row.names = FALSE, col.names = FALSE, quote = FALSE)
+  write.table(images_ir, paste(export, "Archive_DetectorInputs", image_lists$thermal_image_list[i], sep = "\\"), row.names = FALSE, col.names = FALSE, quote = FALSE)
 }
-
 # Clean up workspace
 dbDisconnect(con)
 rm(con, i)
