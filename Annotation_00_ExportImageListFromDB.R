@@ -12,7 +12,7 @@ altitude_maximum <- 3000 #in m (609.6 m = 2000 ft)
 keep_ir_nuc <- "N" # enter Y or N
 
 ## For defining image list names
-project <- "jobss_2021"
+project <- "jobss"
 list_description <- "test"
 run_date <- "20210727" # formatted as YYYYMMDD
 detectionFileType <- "postSurvey" #either postSurvey, irNUC, or newFromML
