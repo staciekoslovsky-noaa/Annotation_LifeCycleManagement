@@ -1,5 +1,5 @@
 # Process detector output data (original detections) to DB
-# S. Hardy, 10 August 2020
+# S. Hardy, 10 August 2021
 
 # Install libraries
 library(tidyverse)
@@ -16,10 +16,45 @@ con <- RPostgreSQL::dbConnect(PostgreSQL(),
                               user = Sys.getenv("pep_admin"), 
                               rstudioapi::askForPassword(paste("Enter your DB password for user account: ", Sys.getenv("pep_admin"), sep = "")))
 
-wd <- "O:\\Data\\Annotations"
+wd <- "O:/Data/Annotations"
 setwd(wd)
 
-# 
+# Prepare list of directories with original data
+dir <- list.dirs(wd, full.names = TRUE, recursive = FALSE) 
+dir <- data.frame(network_path = dir, stringsAsFactors = FALSE)
+dir <- dir %>%
+  mutate(path = basename(network_path)) %>%
+  subset(path != "_Database") %>%
+  subset(path != "_ImportLogs") %>%
+  subset(path != "_TEMPLATE_project_YYYYMMDD_datasetDescription") %>%
+  subset(!grepl("X$", path)) %>%
+  mutate(project_schema = ifelse(grep("jobss", path) == TRUE, "surv_jobss", "TO BE WRITTEN"))
+
+for (i in 1:nrow(dir)){
+  detection_files <- # get list of detection files...could be in root or in specific subfolder
+    # Combine IR and RGB files to get list of files by processing run
+    # Process files without _X at end
+      # Create new record in tbl_detector_meta - and indicate ready to review
+      # Import original data to DB (will be different code for each project)
+      # Add steps to tbl_detector_processing based on project
+      # Import image lists
+      # Create flight_cameraView folder in 02... folder and copy files there. Add _Processed to end of file name
+      # Update import log
+    # Process _X files
+      # Add record to tbl_detector_meta and indicate it will not be processed
+      # Archive files
+      # Update import log
+  
+}
+
+# When done, move all files to Archive_DetectorOutputs
+# Write log file
+
+
+
+
+
+
 
 # Delete data from tables (if needed)
 #RPostgreSQL::dbSendQuery(con, "DELETE FROM surv_test_kamera.tbl_detections_original")
