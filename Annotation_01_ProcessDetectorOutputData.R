@@ -143,6 +143,9 @@ for (i in 1:nrow(dir)){
              rgb_image_list, rgb_detection_csv,
              uv_image_list, uv_detection_csv,
              annotation_status_lku, detector_meta_comments)
+    
+    #### ADD CODE FOR WRITING ANNOTATIONS FOLDER (ON LAN) TO DETECTOR_META TABLE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    
     RPostgreSQL::dbWriteTable(con, c("annotations", "tbl_detector_meta"), detector_meta, append = TRUE, row.names = FALSE)
   
     next_meta_id <- max(detector_meta$id) + 1
@@ -153,6 +156,25 @@ for (i in 1:nrow(dir)){
   # Process files where process_status == to_be_processed
   detector_process <- detector_meta %>%
     filter(annotation_status_lku == "R")
+  
+  # Add steps to tbl_detector_processing  
+  if (dir$project_schema == "surv_jobss") {
+    processing_steps <- RPostgreSQL::dbGetQuery(con, "SELECT processing_step_lku FROM annotations.lku_processing_step WHERE project_schema = \'surv_jobss\' AND processing_order <> 99")
+    
+    detector_process_id <- RPostgreSQL::dbGetQuery(con, "SELECT max(id) FROM annotations.tbl_detector_processing")
+    detector_process_id$max <- ifelse(is.na(detector_process_id$max), 1, detector_process_id$max + 1)
+    
+    detector_processing <- detector_process %>%
+      left_join(processing_steps, by = character()) %>%
+      mutate(detector_meta_id = id,
+             id = 1:n() + detector_process_id$max) %>%
+      select(id, detector_meta_id, processing_step_lku)
+    RPostgreSQL::dbWriteTable(con, c("annotations", "tbl_detector_processing"), detector_processing, append = TRUE, row.names = FALSE)
+    
+    next_processing_id <- max(detector_processing$id) + 1
+    RPostgreSQL::dbSendQuery(con, paste("ALTER SEQUENCE annotations.tbl_detector_processing_id_seq RESTART WITH ", next_processing_id, sep = ""))
+  }
+
   
   for (j in 1:nrow(detector_process)){
     image_list_ir <- paste(detector_path, detector_process$ir_image_list[j], sep = '/')
@@ -186,8 +208,8 @@ for (i in 1:nrow(dir)){
 
       images <- images %>%
         mutate(id = 1:n() + images_id$max) %>%
-        mutate(image_list = detector_process$ir_image_list[j])
-      select("id", "image_name", "image_list")
+        mutate(image_list = detector_process$ir_image_list[j]) %>%
+        select("id", "image_name", "image_list")
 
       rm(fields, original_id)
 
@@ -198,81 +220,70 @@ for (i in 1:nrow(dir)){
       original_id$max <- ifelse(is.na(original_id$max) == TRUE, 0, original_id$max)
 
       fields <- max(count.fields(detection_file_ir, sep = ','))
-      original <- read.csv(detection_file_ir, header = FALSE, stringsAsFactors = FALSE, skip = 4, col.names = paste("V", seq_len(fields)))
-      if(fields == 11) {
-        colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score")
-      } else if (fields == 13) {
-        colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1")
+      
+      if(length(count.fields(detection_file_ir, skip = 4)) > 0) {
+        original <- read.csv(detection_file_ir, header = FALSE, stringsAsFactors = FALSE, skip = 4, col.names = paste("V", seq_len(fields)))
+        if(fields == 11) {
+          colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score")
+        } else if (fields == 13) {
+          colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1")
+        }
+        
+        if("detection_type_x1" %notin% names(original)){
+          original$detection_type_x1 <- ""
+        }
+        if("type_score_x1" %notin% names(original)){
+          original$type_score_x1 <- 0.0000000000
+        }
+        
+        original <- original %>%
+          mutate(image_name = sapply(strsplit(image_name, split= "\\/"), function(x) x[length(x)])) %>%
+          mutate(id = 1:n() + original_id$max) %>%
+          mutate(detection_file = detection_file_ir) %>%
+          mutate(flight = str_extract(image_name, "fl[0-9][0-9]")) %>%
+          mutate(camera_view = gsub("_", "", str_extract(image_name, "_[A-Z]_"))) %>%
+          mutate(detection_id = paste("surv_jobss", flight, camera_view, detection, sep = "_")) %>%
+          select("id", "detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1", "flight", "camera_view", "detection_id", "detection_file")
+        
+        rm(fields, original_id)
+        
+        RPostgreSQL::dbWriteTable(con, c("surv_jobss", "tbl_detections_original_ir"), original, append = TRUE, row.names = FALSE)
       }
-
-      if("detection_type_x1" %notin% names(original)){
-        original$detection_type_x1 <- ""
-      }
-      if("type_score_x1" %notin% names(original)){
-        original$type_score_x1 <- 0.0000000000
-      }
-
-      original <- original %>%
-        mutate(image_name = sapply(strsplit(image_name, split= "\\/"), function(x) x[length(x)])) %>%
-        mutate(id = 1:n() + original_id$max) %>%
-        mutate(detection_file = detection_file_ir) %>%
-        mutate(flight = str_extract(image_name, "fl[0-9][0-9]")) %>%
-        mutate(camera_view = gsub("_", "", str_extract(image_name, "_[A-Z]_"))) %>%
-        mutate(detection_id = paste("surv_jobss", flight, camera_view, detection, sep = "_")) %>%
-        select("id", "detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1", "flight", "camera_view", "detection_id", "detection_file")
-
-      rm(fields, original_id)
-
-      RPostgreSQL::dbWriteTable(con, c("surv_jobss", "tbl_detections_original_ir"), original, append = TRUE, row.names = FALSE)
 
       # Import original detections to DB -- RGB
       original_id <- RPostgreSQL::dbGetQuery(con, "SELECT max(id) FROM surv_jobss.tbl_detections_original_rgb")
       original_id$max <- ifelse(is.na(original_id$max) == TRUE, 0, original_id$max)
 
       fields <- max(count.fields(detection_file_rgb, sep = ','))
-      original <- read.csv(detection_file_ir, header = FALSE, stringsAsFactors = FALSE, skip = 4, col.names = paste("V", seq_len(fields)))
-      if(fields == 11) {
-        colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score")
-      } else if (fields == 13) {
-        colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1")
+      
+      if(length(count.fields(detection_file_rgb, skip = 4)) > 0) {
+        original <- read.csv(detection_file_rgb, header = FALSE, stringsAsFactors = FALSE, skip = 4, col.names = paste("V", seq_len(fields)))
+        if(fields == 11) {
+          colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score")
+        } else if (fields == 13) {
+          colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1")
+        }
+        
+        if("detection_type_x1" %notin% names(original)){
+          original$detection_type_x1 <- ""
+        }
+        if("type_score_x1" %notin% names(original)){
+          original$type_score_x1 <- 0.0000000000
+        }
+        
+        original <- original %>%
+          mutate(image_name = sapply(strsplit(image_name, split= "\\/"), function(x) x[length(x)])) %>%
+          mutate(id = 1:n() + original_id$max) %>%
+          mutate(detection_file = detection_file_rgb) %>%
+          mutate(flight = str_extract(image_name, "fl[0-9][0-9]")) %>%
+          mutate(camera_view = gsub("_", "", str_extract(image_name, "_[A-Z]_"))) %>%
+          mutate(detection_id = paste("surv_jobss", flight, camera_view, detection, sep = "_")) %>%
+          select("id", "detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1", "flight", "camera_view", "detection_id", "detection_file")
+        
+        rm(fields, original_id)
+        
+        RPostgreSQL::dbWriteTable(con, c("surv_jobss", "tbl_detections_original_rgb"), original, append = TRUE, row.names = FALSE)
       }
-
-      if("detection_type_x1" %notin% names(original)){
-        original$detection_type_x1 <- ""
-      }
-      if("type_score_x1" %notin% names(original)){
-        original$type_score_x1 <- 0.0000000000
-      }
-
-      original <- original %>%
-        mutate(image_name = sapply(strsplit(image_name, split= "\\/"), function(x) x[length(x)])) %>%
-        mutate(id = 1:n() + original_id$max) %>%
-        mutate(detection_file = detection_file_ir) %>%
-        mutate(flight = str_extract(image_name, "fl[0-9][0-9]")) %>%
-        mutate(camera_view = gsub("_", "", str_extract(image_name, "_[A-Z]_"))) %>%
-        mutate(detection_id = paste("surv_jobss", flight, camera_view, detection, sep = "_")) %>%
-        select("id", "detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1", "flight", "camera_view", "detection_id", "detection_file")
-
-      rm(fields, original_id)
-
-      RPostgreSQL::dbWriteTable(con, c("surv_jobss", "tbl_detections_original_rgb"), original, append = TRUE, row.names = FALSE)
-      
-      # Add steps to tbl_detector_processing  
-      processing_steps <- RPostgreSQL::dbGetQuery(con, "SELECT processing_step_lku FROM annotations.lku_processing_step WHERE project_schema = \'surv_jobss\' AND processing_order <> 99")
-      
-      detector_process_id <- RPostgreSQL::dbGetQuery(con, "SELECT max(id) FROM annotations.tbl_detector_processing")
-      detector_process_id$max <- ifelse(is.na(detector_process_id$max), 1, detector_process_id$max + 1)
-      
-      detector_process <- detector_process %>%
-        left_join(processing_steps, by = character()) %>%
-        mutate(detector_meta_id = id,
-               id = 1:n() + detector_process_id$max) %>%
-        select(id, detector_meta_id, processing_step_lku)
-      RPostgreSQL::dbWriteTable(con, c("annotations", "tbl_detector_processing"), detector_process, append = TRUE, row.names = FALSE)
-      
-      next_processing_id <- max(detector_process$id) + 1
-      RPostgreSQL::dbSendQuery(con, paste("ALTER SEQUENCE annotations.tbl_detector_processing_id_seq RESTART WITH ", next_processing_id, sep = ""))
-      
 
     } else if (dir$project_schema == "surv_chess") {                                          ######### NOT CURRENTLY RELEVANT -- ADD CODE LATER #########
       
@@ -286,44 +297,30 @@ for (i in 1:nrow(dir)){
     
     # Create flight_cameraView folder in 02... folder and copy files there. Add _Processed to end of file name
     processed_path <- paste(dir$network_path[i], "02_AnnotationFiles_ForProcessing",
-                            paste(dir$project_schema, detector_process$flight[j], detector_process$camera_view[j], sep = "_"),
+                            paste(dir$project_schema, detector_meta$flight[j], detector_meta$camera_view[j], sep = "_"),
                             sep= "/")
     
     dir.create(processed_path)
     
-    if (!is.na(detector_process$ir_image_list[j])) {
-      file.copy(paste(detector_path, detector_process$ir_image_list[j], sep = "/"), paste(processed_path, detector_process$ir_image_list[j], sep = "/"))
-      file.copy(paste(detector_path, detector_process$ir_detection_csv[j], sep = "/"), paste(processed_path, detector_process$ir_detection_csv[j], sep = "/"))
+    if (!is.na(detector_meta$ir_image_list[j])) {
+      file.copy(paste(detector_path, detector_meta$ir_image_list[j], sep = "/"), paste(processed_path, detector_meta$ir_image_list[j], sep = "/"))
+      file.copy(paste(detector_path, detector_meta$ir_detection_csv[j], sep = "/"), paste(processed_path, detector_meta$ir_detection_csv[j], sep = "/"))
     }
-    if (!is.na(detector_process$rgb_image_list[j])) {
-      file.copy(paste(detector_path, detector_process$rgb_image_list[j], sep = "/"), paste(processed_path, detector_process$rgb_image_list[j], sep = "/"))
-      file.copy(paste(detector_path, detector_process$rgb_detection_csv[j], sep = "/"), paste(processed_path, detector_process$rgb_detection_csv[j], sep = "/"))
+    if (!is.na(detector_meta$rgb_image_list[j])) {
+      file.copy(paste(detector_path, detector_meta$rgb_image_list[j], sep = "/"), paste(processed_path, detector_meta$rgb_image_list[j], sep = "/"))
+      file.copy(paste(detector_path, detector_meta$rgb_detection_csv[j], sep = "/"), paste(processed_path, detector_meta$rgb_detection_csv[j], sep = "/"))
     }
-    if (!is.na(detector_process$uv_image_list[j])) {
-      file.copy(paste(detector_path, detector_process$uv_image_list[j], sep = "/"), paste(processed_path, detector_process$uv_image_list[j], sep = "/"))
-      file.copy(paste(detector_path, detector_process$uv_detection_csv[j], sep = "/"), paste(processed_path, detector_process$uv_detection_csv[j], sep = "/"))
+    if (!is.na(detector_meta$uv_image_list[j])) {
+      file.copy(paste(detector_path, detector_meta$uv_image_list[j], sep = "/"), paste(processed_path, detector_meta$uv_image_list[j], sep = "/"))
+      file.copy(paste(detector_path, detector_meta$uv_detection_csv[j], sep = "/"), paste(processed_path, detector_meta$uv_detection_csv[j], sep = "/"))
     }
   }
   
   # Archive files
-  archive_path <- paste(dir$network_path[i], "Archive_DetectionFiles",
-                        paste(dir$project_schema, detector_process$flight[j], detector_process$camera_view[j], sep = "_"),
-                        sep= "/")
+  archive_folder <- paste(dir$network_path[i], "01_DetectorOutputs", sep= "/")
+  archive_path <- paste(dir$network_path[i], "Archive_DetectionFiles", sep= "/")
   
-  dir.create(archive_path)
-  
-  if (!is.na(detector_meta$ir_image_list[j])) {
-    file.copy(paste(detector_path, detector_meta$ir_image_list[j], sep = "/"), paste(archive_path, detector_meta$ir_image_list[j], sep = "/"))
-    file.copy(paste(detector_path, detector_meta$ir_detection_csv[j], sep = "/"), paste(archive_path, detector_meta$ir_detection_csv[j], sep = "/"))
-  }
-  if (!is.na(detector_meta$rgb_image_list[j])) {
-    file.copy(paste(detector_path, detector_meta$rgb_image_list[j], sep = "/"), paste(processed_path, detector_meta$rgb_image_list[j], sep = "/"))
-    file.copy(paste(detector_path, detector_meta$rgb_detection_csv[j], sep = "/"), paste(processed_path, detector_meta$rgb_detection_csv[j], sep = "/"))
-  }
-  if (!is.na(detector_meta$uv_image_list[j])) {
-    file.copy(paste(detector_path, detector_meta$uv_image_list[j], sep = "/"), paste(processed_path, detector_meta$uv_image_list[j], sep = "/"))
-    file.copy(paste(detector_path, detector_meta$uv_detection_csv[j], sep = "/"), paste(processed_path, detector_meta$uv_detection_csv[j], sep = "/"))
-  }
+  file.copy(archive_folder, archive_path)
   
   # Write log file
   write.csv(detector_meta, paste("O:/Data/Annotations/_ImportLogs/importLog_20210902_", dir$path[i], ".csv", sep = ""), row.names = FALSE)
@@ -331,3 +328,9 @@ for (i in 1:nrow(dir)){
 
 RPostgreSQL::dbDisconnect(con)
 rm(con)
+
+# DELETE FROM surv_jobss.tbl_detections_original_rgb;
+# DELETE FROM surv_jobss.tbl_detections_original_ir;
+# DELETE FROM surv_jobss.tbl_images_imagelists;
+# DELETE FROM annotations.tbl_detector_processing;
+# DELETE FROM annotations.tbl_detector_meta;
