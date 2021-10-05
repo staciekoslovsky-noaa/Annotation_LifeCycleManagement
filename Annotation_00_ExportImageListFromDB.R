@@ -4,7 +4,7 @@
 # Define user variables ------------------------------------------
 ## For DB query
 db_schema <- "surv_jobss"
-db_table <- "tbl_images_4imageList"
+db_table <- "summ_data_inventory"
 
 ## For filtering images
 altitude_minimum <- 0 #in m (152.4 m = 500 ft)
@@ -12,9 +12,9 @@ altitude_maximum <- 3000 #in m (609.6 m = 2000 ft)
 keep_ir_nuc <- "N" # enter Y or N
 
 ## For defining image list names
-project <- "jobss"
-list_description <- "test"
-run_date <- "20210727" # formatted as YYYYMMDD
+project <- "jobss_2021"
+list_description <- "batchProcessing"
+run_date <- "20211005" # formatted as YYYYMMDD
 detectionFileType <- "postSurvey" #either postSurvey, irNUC, or newFromML
 
 ## For assigning transformation files
@@ -71,25 +71,30 @@ images <- images %>%
   filter(if (keep_ir_nuc == "Y") ir_nuc == 'N' | is.na(ir_nuc) else ir_nuc == ir_nuc | is.na(ir_nuc)) %>%  
   select(flight, camera_view, ir_image_path, rgb_image_path) %>%
   mutate(image_list_rgb = paste(project, "_", flight, "_", camera_view, "_", list_description, "_rgb_images_", run_date, ".txt", sep = ""),
-         image_list_ir = paste(project, "_", flight, "_", camera_view, "_", list_description, "_ir_images_", run_date, ".txt", sep = ""))
+         image_list_ir = paste(project, "_", flight, "_", camera_view, "_", list_description, "_ir_images_", run_date, ".txt", sep = ""),
+         image_list_uv = paste(project, "_", flight, "_", camera_view, "_", list_description, "_uv_images_", run_date, ".txt", sep = ""))
 
 # Create dataset_manifest.csv: dataset_name, color_image_list, thermal_image_list, transformation_file
 manifest <- images %>%
-  select(flight, camera_view, image_list_rgb, image_list_ir) %>%
-  distinct(flight, camera_view, image_list_rgb, image_list_ir) %>%
+  select(flight, camera_view, image_list_rgb, image_list_ir, image_list_uv) %>%
+  distinct(flight, camera_view, image_list_rgb, image_list_ir, image_list_uv) %>%
   mutate(dataset_name = paste(project, flight, camera_view, detectionFileType, sep = "_"),
          transformation_file = ifelse(camera_view == "C", transform_C,
                                       ifelse(camera_view == "L", transform_L, transform_R))) %>%
   rename(color_image_list = image_list_rgb,
-         thermal_image_list = image_list_ir) %>%
-  select(dataset_name, color_image_list, thermal_image_list, transformation_file)
+         thermal_image_list = image_list_ir,
+         uv_image_list = image_list_uv) %>%
+  select(dataset_name, color_image_list, thermal_image_list, transformation_file, uv_image_list)
+
+image_lists <- manifest %>%
+  select(color_image_list, thermal_image_list, uv_image_list) 
+
+manifest <- manifest %>%
+  select(color_image_list, thermal_image_list, transformation_file)
 
 write.csv(manifest, file = paste(export, "Archive_DetectorInputs", "dataset_manifest.csv", sep = "\\"), row.names = FALSE)
 
 # Export image lists
-image_lists <- manifest %>%
-  select(color_image_list, thermal_image_list) 
-
 for (i in 1:nrow(image_lists)){
   images_rgb <- images %>%
     filter(image_list_rgb == image_lists$color_image_list[i]) %>%
@@ -99,9 +104,15 @@ for (i in 1:nrow(image_lists)){
     filter(image_list_ir == image_lists$thermal_image_list[i]) %>%
     select(ir_image_path)
   
+  images_uv <- images %>%
+    filter(image_list_uv == image_lists$uv_image_list[i]) %>%
+    select(ir_image_path)
+  
   write.table(images_rgb, paste(export, "Archive_DetectorInputs", image_lists$color_image_list[i], sep = "\\"), row.names = FALSE, col.names = FALSE, quote = FALSE)
   write.table(images_ir, paste(export, "Archive_DetectorInputs", image_lists$thermal_image_list[i], sep = "\\"), row.names = FALSE, col.names = FALSE, quote = FALSE)
+  write.table(images_uv, paste(export, "Archive_DetectorInputs", image_lists$uv_image_list[i], sep = "\\"), row.names = FALSE, col.names = FALSE, quote = FALSE)
 }
+
 # Clean up workspace
 dbDisconnect(con)
 rm(con, i)
