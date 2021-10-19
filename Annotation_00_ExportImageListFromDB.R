@@ -69,7 +69,7 @@ images <- images %>%
          !is.na(ir_image_name),
          !is.na(rgb_image_name)) %>%
   filter(if (keep_ir_nuc == "Y") ir_nuc == 'N' | is.na(ir_nuc) else ir_nuc == ir_nuc | is.na(ir_nuc)) %>%  
-  select(flight, camera_view, ir_image_path, rgb_image_path) %>%
+  select(flight, camera_view, ir_image_path, rgb_image_path, uv_image_path) %>%
   mutate(image_list_rgb = paste(project, "_", flight, "_", camera_view, "_", list_description, "_rgb_images_", run_date, ".txt", sep = ""),
          image_list_ir = paste(project, "_", flight, "_", camera_view, "_", list_description, "_ir_images_", run_date, ".txt", sep = ""),
          image_list_uv = paste(project, "_", flight, "_", camera_view, "_", list_description, "_uv_images_", run_date, ".txt", sep = ""))
@@ -97,16 +97,16 @@ write.csv(manifest, file = paste(export, "Archive_DetectorInputs", "dataset_mani
 # Export image lists
 for (i in 1:nrow(image_lists)){
   images_rgb <- images %>%
-    filter(image_list_rgb == image_lists$color_image_list[i]) %>%
+    filter(image_list_rgb == image_lists$color_image_list[i] & !is.na(rgb_image_path)) %>%
     select(rgb_image_path)
-  
+
   images_ir <- images %>%
-    filter(image_list_ir == image_lists$thermal_image_list[i]) %>%
+    filter(image_list_ir == image_lists$thermal_image_list[i] & !is.na(ir_image_path)) %>%
     select(ir_image_path)
   
   images_uv <- images %>%
-    filter(image_list_uv == image_lists$uv_image_list[i]) %>%
-    select(ir_image_path)
+    filter(image_list_uv == image_lists$uv_image_list[i] & !is.na(uv_image_path)) %>%
+    select(uv_image_path)
   
   write.table(images_rgb, paste(export, "Archive_DetectorInputs", image_lists$color_image_list[i], sep = "\\"), row.names = FALSE, col.names = FALSE, quote = FALSE)
   write.table(images_ir, paste(export, "Archive_DetectorInputs", image_lists$thermal_image_list[i], sep = "\\"), row.names = FALSE, col.names = FALSE, quote = FALSE)
