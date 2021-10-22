@@ -26,7 +26,7 @@ con <- RPostgreSQL::dbConnect(PostgreSQL(),
                               user = Sys.getenv("pep_admin"), 
                               rstudioapi::askForPassword(paste("Enter your DB password for user account: ", Sys.getenv("pep_admin"), sep = "")))
 
-wd <- "O:/Data/Annotations"
+wd <- "O:/Data/Annotations/jobss_2021_20210726_batchProcessing"
 setwd(wd)
 
 # Prepare list of directories with original data -----------------------------------------------
@@ -144,8 +144,6 @@ for (i in 1:nrow(dir)){
              uv_image_list, uv_detection_csv,
              annotation_status_lku, detector_meta_comments)
     
-    #### ADD CODE FOR WRITING ANNOTATIONS FOLDER (ON LAN) TO DETECTOR_META TABLE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    
     RPostgreSQL::dbWriteTable(con, c("annotations", "tbl_detector_meta"), detector_meta, append = TRUE, row.names = FALSE)
   
     next_meta_id <- max(detector_meta$id) + 1
@@ -182,117 +180,106 @@ for (i in 1:nrow(dir)){
     detection_file_ir <- paste(detector_path, detector_process$ir_detection_csv[j], sep = '/')
     detection_file_rgb <- paste(detector_path, detector_process$rgb_detection_csv[j], sep = '/')
     
-    # Import original data to DB                                                              ######### WRITE CODE LATER TO PROCESS AS A FUNCTION, RATHER THAN REPEATING IMPORT CODE #########
-    if (dir$project_schema == "surv_jobss") {
+    # Import original data to DB                                                              
       
-      # Import image lists to DB -- IR
-      images_id <- RPostgreSQL::dbGetQuery(con, "SELECT max(id) FROM surv_jobss.tbl_images_imagelists")
-      images_id$max <- ifelse(is.na(images_id$max) == TRUE, 0, images_id$max)
+    # Import image lists to DB -- IR
+    images_id <- RPostgreSQL::dbGetQuery(con, "SELECT max(id) FROM surv_jobss.tbl_images_imagelists")
+    images_id$max <- ifelse(is.na(images_id$max) == TRUE, 0, images_id$max)
 
-      images <- read.table(image_list_ir, header = FALSE, stringsAsFactors = FALSE, col.names = "image_name")
+    images <- read.table(image_list_ir, header = FALSE, stringsAsFactors = FALSE, col.names = "image_name")
 
-      images <- images %>%
-        mutate(id = 1:n() + images_id$max) %>%
-        mutate(image_list = detector_process$ir_image_list[j]) %>%
-        select("id", "image_name", "image_list")
+    images <- images %>%
+      mutate(id = 1:n() + images_id$max) %>%
+      mutate(image_list = detector_process$ir_image_list[j]) %>%
+      select("id", "image_name", "image_list")
 
-      rm(images_id)
+    rm(images_id)
 
-      RPostgreSQL::dbWriteTable(con, c("surv_jobss", "tbl_images_imagelists"), images, append = TRUE, row.names = FALSE)
+    RPostgreSQL::dbWriteTable(con, c("surv_jobss", "tbl_images_imagelists"), images, append = TRUE, row.names = FALSE)
 
-      # Import image lists to DB -- RGB
-      images_id <- RPostgreSQL::dbGetQuery(con, "SELECT max(id) FROM surv_jobss.tbl_images_imagelists")
-      images_id$max <- ifelse(is.na(images_id$max) == TRUE, 0, images_id$max)
+    # Import image lists to DB -- RGB
+    images_id <- RPostgreSQL::dbGetQuery(con, "SELECT max(id) FROM surv_jobss.tbl_images_imagelists")
+    images_id$max <- ifelse(is.na(images_id$max) == TRUE, 0, images_id$max)
 
-      images <- read.table(image_list_rgb, header = FALSE, stringsAsFactors = FALSE, col.names = "image_name")
+    images <- read.table(image_list_rgb, header = FALSE, stringsAsFactors = FALSE, col.names = "image_name")
 
-      images <- images %>%
-        mutate(id = 1:n() + images_id$max) %>%
-        mutate(image_list = detector_process$ir_image_list[j]) %>%
-        select("id", "image_name", "image_list")
+    images <- images %>%
+      mutate(id = 1:n() + images_id$max) %>%
+      mutate(image_list = detector_process$ir_image_list[j]) %>%
+      select("id", "image_name", "image_list")
 
+    rm(fields, original_id)
+
+    RPostgreSQL::dbWriteTable(con, c("surv_jobss", "tbl_images_imagelists"), images, append = TRUE, row.names = FALSE)
+
+    # Import original detections to DB -- IR
+    original_id <- RPostgreSQL::dbGetQuery(con, "SELECT max(id) FROM surv_jobss.tbl_detections_original_ir")
+    original_id$max <- ifelse(is.na(original_id$max) == TRUE, 0, original_id$max)
+
+    fields <- max(count.fields(detection_file_ir, sep = ','))
+    
+    if(length(count.fields(detection_file_ir, skip = 4)) > 0) {
+      original <- read.csv(detection_file_ir, header = FALSE, stringsAsFactors = FALSE, skip = 4, col.names = paste("V", seq_len(fields)))
+      if(fields == 11) {
+        colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score")
+      } else if (fields == 13) {
+        colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1")
+      }
+      
+      if("detection_type_x1" %notin% names(original)){
+        original$detection_type_x1 <- ""
+      }
+      if("type_score_x1" %notin% names(original)){
+        original$type_score_x1 <- 0.0000000000
+      }
+      
+      original <- original %>%
+        mutate(image_name = sapply(strsplit(image_name, split= "\\/"), function(x) x[length(x)])) %>%
+        mutate(id = 1:n() + original_id$max) %>%
+        mutate(detection_file = detection_file_ir) %>%
+        mutate(flight = str_extract(image_name, "fl[0-9][0-9]")) %>%
+        mutate(camera_view = gsub("_", "", str_extract(image_name, "_[A-Z]_"))) %>%
+        mutate(detection_id = paste("surv_jobss", flight, camera_view, detection, sep = "_")) %>%
+        select("id", "detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1", "flight", "camera_view", "detection_id", "detection_file")
+      
       rm(fields, original_id)
-
-      RPostgreSQL::dbWriteTable(con, c("surv_jobss", "tbl_images_imagelists"), images, append = TRUE, row.names = FALSE)
-
-      # Import original detections to DB -- IR
-      original_id <- RPostgreSQL::dbGetQuery(con, "SELECT max(id) FROM surv_jobss.tbl_detections_original_ir")
-      original_id$max <- ifelse(is.na(original_id$max) == TRUE, 0, original_id$max)
-
-      fields <- max(count.fields(detection_file_ir, sep = ','))
       
-      if(length(count.fields(detection_file_ir, skip = 4)) > 0) {
-        original <- read.csv(detection_file_ir, header = FALSE, stringsAsFactors = FALSE, skip = 4, col.names = paste("V", seq_len(fields)))
-        if(fields == 11) {
-          colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score")
-        } else if (fields == 13) {
-          colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1")
-        }
-        
-        if("detection_type_x1" %notin% names(original)){
-          original$detection_type_x1 <- ""
-        }
-        if("type_score_x1" %notin% names(original)){
-          original$type_score_x1 <- 0.0000000000
-        }
-        
-        original <- original %>%
-          mutate(image_name = sapply(strsplit(image_name, split= "\\/"), function(x) x[length(x)])) %>%
-          mutate(id = 1:n() + original_id$max) %>%
-          mutate(detection_file = detection_file_ir) %>%
-          mutate(flight = str_extract(image_name, "fl[0-9][0-9]")) %>%
-          mutate(camera_view = gsub("_", "", str_extract(image_name, "_[A-Z]_"))) %>%
-          mutate(detection_id = paste("surv_jobss", flight, camera_view, detection, sep = "_")) %>%
-          select("id", "detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1", "flight", "camera_view", "detection_id", "detection_file")
-        
-        rm(fields, original_id)
-        
-        RPostgreSQL::dbWriteTable(con, c("surv_jobss", "tbl_detections_original_ir"), original, append = TRUE, row.names = FALSE)
+      RPostgreSQL::dbWriteTable(con, c("surv_jobss", "tbl_detections_original_ir"), original, append = TRUE, row.names = FALSE)
+    }
+
+    # Import original detections to DB -- RGB
+    original_id <- RPostgreSQL::dbGetQuery(con, "SELECT max(id) FROM surv_jobss.tbl_detections_original_rgb")
+    original_id$max <- ifelse(is.na(original_id$max) == TRUE, 0, original_id$max)
+
+    fields <- max(count.fields(detection_file_rgb, sep = ','))
+    
+    if(length(count.fields(detection_file_rgb, skip = 4)) > 0) {
+      original <- read.csv(detection_file_rgb, header = FALSE, stringsAsFactors = FALSE, skip = 4, col.names = paste("V", seq_len(fields)))
+      if(fields == 11) {
+        colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score")
+      } else if (fields == 13) {
+        colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1")
       }
-
-      # Import original detections to DB -- RGB
-      original_id <- RPostgreSQL::dbGetQuery(con, "SELECT max(id) FROM surv_jobss.tbl_detections_original_rgb")
-      original_id$max <- ifelse(is.na(original_id$max) == TRUE, 0, original_id$max)
-
-      fields <- max(count.fields(detection_file_rgb, sep = ','))
       
-      if(length(count.fields(detection_file_rgb, skip = 4)) > 0) {
-        original <- read.csv(detection_file_rgb, header = FALSE, stringsAsFactors = FALSE, skip = 4, col.names = paste("V", seq_len(fields)))
-        if(fields == 11) {
-          colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score")
-        } else if (fields == 13) {
-          colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1")
-        }
-        
-        if("detection_type_x1" %notin% names(original)){
-          original$detection_type_x1 <- ""
-        }
-        if("type_score_x1" %notin% names(original)){
-          original$type_score_x1 <- 0.0000000000
-        }
-        
-        original <- original %>%
-          mutate(image_name = sapply(strsplit(image_name, split= "\\/"), function(x) x[length(x)])) %>%
-          mutate(id = 1:n() + original_id$max) %>%
-          mutate(detection_file = detection_file_rgb) %>%
-          mutate(flight = str_extract(image_name, "fl[0-9][0-9]")) %>%
-          mutate(camera_view = gsub("_", "", str_extract(image_name, "_[A-Z]_"))) %>%
-          mutate(detection_id = paste("surv_jobss", flight, camera_view, detection, sep = "_")) %>%
-          select("id", "detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1", "flight", "camera_view", "detection_id", "detection_file")
-        
-        rm(fields, original_id)
-        
-        RPostgreSQL::dbWriteTable(con, c("surv_jobss", "tbl_detections_original_rgb"), original, append = TRUE, row.names = FALSE)
+      if("detection_type_x1" %notin% names(original)){
+        original$detection_type_x1 <- ""
       }
-
-    } else if (dir$project_schema == "surv_chess") {                                          ######### NOT CURRENTLY RELEVANT -- ADD CODE LATER #########
+      if("type_score_x1" %notin% names(original)){
+        original$type_score_x1 <- 0.0000000000
+      }
       
-    } else if (dir$project_schema == "surv_boss") {                                           ######### NOT CURRENTLY RELEVANT -- ADD CODE LATER #########
+      original <- original %>%
+        mutate(image_name = sapply(strsplit(image_name, split= "\\/"), function(x) x[length(x)])) %>%
+        mutate(id = 1:n() + original_id$max) %>%
+        mutate(detection_file = detection_file_rgb) %>%
+        mutate(flight = str_extract(image_name, "fl[0-9][0-9]")) %>%
+        mutate(camera_view = gsub("_", "", str_extract(image_name, "_[A-Z]_"))) %>%
+        mutate(detection_id = paste("surv_jobss", flight, camera_view, detection, sep = "_")) %>%
+        select("id", "detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1", "flight", "camera_view", "detection_id", "detection_file")
       
-    } else if (dir$project_schema == "surv_polar_bear") {                                     ######### NOT CURRENTLY RELEVANT -- ADD CODE LATER #########
+      rm(fields, original_id)
       
-    } else if (dir$project_schema == "surv_test_kotz") {                                      ######### NOT CURRENTLY RELEVANT -- ADD CODE LATER #########
-      
+      RPostgreSQL::dbWriteTable(con, c("surv_jobss", "tbl_detections_original_rgb"), original, append = TRUE, row.names = FALSE)
     }
     
     # Create flight_cameraView folder in 02... folder and copy files there. Add _Processed to end of file name
