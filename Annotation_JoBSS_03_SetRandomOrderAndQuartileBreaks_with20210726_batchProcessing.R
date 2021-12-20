@@ -21,7 +21,7 @@ ir_summary <- ir_summary[sample(1:nrow(ir_summary)), ]
 ir_summary$random_order <- 1:nrow(ir_summary)
 
 
-
+# Identify quartile breaks of data in random order
   
 
 
