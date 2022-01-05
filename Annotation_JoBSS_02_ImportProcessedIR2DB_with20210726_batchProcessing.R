@@ -26,7 +26,8 @@ folders <- folders %>%
   mutate(flight = str_extract(folder_path, "fl[0-9][0-9]"),
          camera_view = gsub("_", "", str_extract(folder_path, "_[A-Z]$")))
 
-for (i in 21:nrow(folders)) {
+for (i in 1:nrow(folders)) {
+  if(folders$flight[i] == 'fl07' & folders$camera_view[i] == 'L') next 
   processed_id <- RPostgreSQL::dbGetQuery(con, "SELECT max(id) FROM surv_jobss.tbl_detections_processed_ir")
   processed_id$max <- ifelse(is.na(processed_id$max), 0, processed_id$max)
   
