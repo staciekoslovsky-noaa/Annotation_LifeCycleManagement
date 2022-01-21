@@ -44,7 +44,7 @@ for (i in 1:nrow(folders)) {
     mutate(detection_file = rgb_validated) %>%
     mutate(flight = folders$flight[i]) %>%
     mutate(camera_view = folders$camera_view[i]) %>%
-    mutate(detection_id = paste("jobss", flight, camera_view, detection, sep = "_")) %>%
+    mutate(detection_id = paste("surv_jobss", flight, camera_view, detection, sep = "_")) %>%
     mutate(species_confidence = ifelse(grepl("^species_confidence", att1), gsub("species_confidence *", "", att1),
                                        ifelse(grepl("^species_confidence", att2), gsub("species_confidence *", "", att2),
                                               ifelse(grepl("^species_confidence", att3), gsub("species_confidence *", "", att3), 

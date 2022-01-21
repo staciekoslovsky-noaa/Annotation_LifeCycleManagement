@@ -41,7 +41,7 @@ for (i in 1:nrow(folders)) {
     mutate(detection_file = ir_validated) %>%
     mutate(flight = folders$flight[i]) %>%
     mutate(camera_view = folders$camera_view[i]) %>%
-    mutate(detection_id = paste("jobss", flight, camera_view, detection, sep = "_")) %>%
+    mutate(detection_id = paste("surv_jobss", flight, camera_view, detection, sep = "_")) %>%
     select("id", "detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "flight", "camera_view", "detection_id", "detection_file", "detection_comments")
   
   # Import data to DB
