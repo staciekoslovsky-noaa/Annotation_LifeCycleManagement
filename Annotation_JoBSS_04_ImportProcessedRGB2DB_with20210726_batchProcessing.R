@@ -59,7 +59,7 @@ for (i in 1:nrow(folders)) {
                                                      ifelse(grepl("^age_class[[:space:]]", att4), gsub("age_class *", "", att4),
                                                             ifelse(grepl("^age_class[[:space:]]", att5), gsub("age_class *", "", att5), 
                                                                    ifelse(grepl("^age_class[[:space:]]", att6), gsub("age_class *", "", att6),
-                                                                          ifelse(grepl("^age_clas[[:space:]]s", att7), gsub("age_class *", "", att7), 
+                                                                          ifelse(grepl("^age_class[[:space:]]", att7), gsub("age_class *", "", att7), 
                                                                                  ifelse(grepl("^age_class[[:space:]]", att8), gsub("age_class *", "", att8), "NA"))))))))) %>%
     mutate(age_class_confidence = ifelse(grepl("^age_class_confidence", att1), gsub("age_class_confidence *", "", att1),
                               ifelse(grepl("^age_class_confidence", att2), gsub("age_class_confidence *", "", att2),
