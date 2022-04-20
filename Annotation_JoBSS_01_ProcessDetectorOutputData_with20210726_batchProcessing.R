@@ -221,9 +221,9 @@ for (i in 1:nrow(dir)){
     if(length(count.fields(detection_file_ir, skip = 4)) > 0) {
       original <- read.csv(detection_file_ir, header = FALSE, stringsAsFactors = FALSE, skip = 4, col.names = paste("V", seq_len(fields)))
       if(fields == 11) {
-        colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score")
+        colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_top", "bound_right", "bound_bottom", "score", "length", "detection_type", "type_score")
       } else if (fields == 13) {
-        colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1")
+        colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_top", "bound_right", "bound_bottom", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1")
       }
       
       if("detection_type_x1" %notin% names(original)){
@@ -240,7 +240,7 @@ for (i in 1:nrow(dir)){
         mutate(flight = str_extract(image_name, "fl[0-9][0-9]")) %>%
         mutate(camera_view = gsub("_", "", str_extract(image_name, "_[A-Z]_"))) %>%
         mutate(detection_id = paste("surv_jobss", flight, camera_view, detection, sep = "_")) %>%
-        select("id", "detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1", "flight", "camera_view", "detection_id", "detection_file")
+        select("id", "detection", "image_name", "frame_number", "bound_left", "bound_top", "bound_right", "bound_bottom", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1", "flight", "camera_view", "detection_id", "detection_file")
       
       rm(fields, original_id)
       
@@ -256,9 +256,9 @@ for (i in 1:nrow(dir)){
     if(length(count.fields(detection_file_rgb, skip = 4)) > 0) {
       original <- read.csv(detection_file_rgb, header = FALSE, stringsAsFactors = FALSE, skip = 4, col.names = paste("V", seq_len(fields)))
       if(fields == 11) {
-        colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score")
+        colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_top", "bound_right", "bound_bottom", "score", "length", "detection_type", "type_score")
       } else if (fields == 13) {
-        colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1")
+        colnames(original) <- c("detection", "image_name", "frame_number", "bound_left", "bound_top", "bound_right", "bound_bottom", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1")
       }
       
       if("detection_type_x1" %notin% names(original)){
@@ -275,7 +275,7 @@ for (i in 1:nrow(dir)){
         mutate(flight = str_extract(image_name, "fl[0-9][0-9]")) %>%
         mutate(camera_view = gsub("_", "", str_extract(image_name, "_[A-Z]_"))) %>%
         mutate(detection_id = paste("surv_jobss", flight, camera_view, detection, sep = "_")) %>%
-        select("id", "detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1", "flight", "camera_view", "detection_id", "detection_file")
+        select("id", "detection", "image_name", "frame_number", "bound_left", "bound_top", "bound_right", "bound_bottom", "score", "length", "detection_type", "type_score", "detection_type_x1", "type_score_x1", "flight", "camera_view", "detection_id", "detection_file")
       
       rm(fields, original_id)
       
