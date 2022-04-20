@@ -35,7 +35,7 @@ for (i in 1:nrow(folders)) {
   rgb_validated <- files[grepl('_rgb_irDetectionsTransposed_processed', files)] 
   if(length(rgb_validated) == 0) next
   
-  processed <- read.csv(paste(folders$folder_path[i], rgb_validated, sep = "\\"), skip = 2, header = FALSE, stringsAsFactors = FALSE, col.names = c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", 
+  processed <- read.csv(paste(folders$folder_path[i], rgb_validated, sep = "\\"), skip = 2, header = FALSE, stringsAsFactors = FALSE, col.names = c("detection", "image_name", "frame_number", "bound_left", "bound_top", "bound_right", "bound_bottom", "score", "length", "detection_type", "type_score", 
                                                                                                                                                     "att1", "att2", "att3", "att4", "att5", "att6", "att7", "att8"))
   
   processed <- data.frame(lapply(processed, function(x) {gsub("\\(trk-atr\\) *", "", x)})) %>%
@@ -109,7 +109,7 @@ for (i in 1:nrow(folders)) {
                                                                          ifelse(grepl("^bear_id", att6), gsub("bear_id *", "", att6),
                                                                                 ifelse(grepl("^bear_id", att7), gsub("bear_id *", "", att7), 
                                                                                        ifelse(grepl("^bear_id", att8), gsub("bear_id *", "", att8), "NA"))))))))) %>%
-    select("id", "detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", 
+    select("id", "detection", "image_name", "frame_number", "bound_left", "bound_top", "bound_right", "bound_bottom", "score", "length", "detection_type", "type_score", 
            "flight", "camera_view", "detection_id", "detection_file",
            "species_confidence", "age_class", "age_class_confidence", "alt_species", "alt_species_confidence", "alt_age_class", "alt_age_class_confidence", "bear_id")
   

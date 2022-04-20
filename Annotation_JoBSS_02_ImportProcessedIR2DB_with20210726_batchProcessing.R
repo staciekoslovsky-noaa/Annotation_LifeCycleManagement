@@ -34,7 +34,7 @@ for (i in 1:nrow(folders)) {
   files <- list.files(folders$folder_path[i])
   ir_validated <- files[grepl('ir_detections_validated', files)] 
   
-  processed <- read.csv(paste(folders$folder_path[i], ir_validated, sep = "\\"), skip = 2, header = FALSE, stringsAsFactors = FALSE, col.names = c("detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "detection_comments"))
+  processed <- read.csv(paste(folders$folder_path[i], ir_validated, sep = "\\"), skip = 2, header = FALSE, stringsAsFactors = FALSE, col.names = c("detection", "image_name", "frame_number", "bound_left", "bound_top", "bound_right", "bound_bottom", "score", "length", "detection_type", "type_score", "detection_comments"))
   processed <- processed %>%
     mutate(image_name = sapply(strsplit(image_name, split= "\\/"), function(x) x[length(x)])) %>%
     mutate(id = 1:n() + processed_id$max) %>%
@@ -42,7 +42,7 @@ for (i in 1:nrow(folders)) {
     mutate(flight = folders$flight[i]) %>%
     mutate(camera_view = folders$camera_view[i]) %>%
     mutate(detection_id = paste("surv_jobss", flight, camera_view, detection, sep = "_")) %>%
-    select("id", "detection", "image_name", "frame_number", "bound_left", "bound_bottom", "bound_right", "bound_top", "score", "length", "detection_type", "type_score", "flight", "camera_view", "detection_id", "detection_file", "detection_comments")
+    select("id", "detection", "image_name", "frame_number", "bound_left", "bound_top", "bound_right", "bound_bottom", "score", "length", "detection_type", "type_score", "flight", "camera_view", "detection_id", "detection_file", "detection_comments")
   
   # Import data to DB
   RPostgreSQL::dbWriteTable(con, c("surv_jobss", "tbl_detections_processed_ir"), processed, append = TRUE, row.names = FALSE)
