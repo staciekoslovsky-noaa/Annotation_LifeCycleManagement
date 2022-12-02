@@ -13,7 +13,6 @@ setwd(wd)
 con <- RPostgreSQL::dbConnect(PostgreSQL(), 
                               dbname = Sys.getenv("pep_db"), 
                               host = Sys.getenv("pep_ip"), 
-                              #port = Sys.getenv("pep_port"), 
                               user = Sys.getenv("pep_admin"), 
                               password = Sys.getenv("admin_pw"))
 
