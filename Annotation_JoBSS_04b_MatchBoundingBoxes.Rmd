@@ -8,7 +8,7 @@ knit: (function(inputFile, encoding) {
   rmarkdown::render(
     inputFile, 
     encoding = encoding, 
-    output_file = file.path(dirname(inputFile), 'JoBSS_BoundingBoxMatching_20221115.pdf'))
+    output_file = file.path(dirname(inputFile), 'JoBSS_BoundingBoxMatching_20221128.pdf'))
   })
 ---
 
@@ -40,18 +40,7 @@ merge_and_intersect <- function(matchWhat, toWhat, method) {
                                    !!as.name(paste0(matchWhat_var, "_bound_left")) > !!as.name(paste0(toWhat_var, "_bound_right")), "no", "yes"),
            intersect_TB = ifelse(!!as.name(paste0(matchWhat_var, "_bound_top")) > !!as.name(paste0(toWhat_var, "_bound_bottom")) |
                                    !!as.name(paste0(matchWhat_var, "_bound_bottom")) < !!as.name(paste0(toWhat_var, "_bound_top")), "no", "yes"))
-  
-  intersecting <- data %>%
-    filter(intersect_LR == "yes" & intersect_TB == "yes") %>%
-    mutate(distance = sqrt(
-      ((!!as.name(paste0(matchWhat_var, "_average_x")) - !!as.name(paste0(toWhat_var, "_average_x"))) ^ 2) + 
-        ((!!as.name(paste0(matchWhat_var, "_average_y")) - !!as.name(paste0(toWhat_var, "_average_y"))) ^ 2)) ) %>%
-    group_by(image_name, !!as.name(paste0(toWhat_var, "_id"))) %>%
-    slice(which.min(distance)) %>%
-    # filter(distance < 50) %>%
-    select(image_name, paste0(matchWhat_var, "_id"), paste0(toWhat_var, "_id"), distance) %>%
-    ungroup()
-  
+
   if(method == "minimum_distance") {
     intersecting <- data %>%
       filter(intersect_LR == "yes" & intersect_TB == "yes") %>%
