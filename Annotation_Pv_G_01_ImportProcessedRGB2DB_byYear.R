@@ -26,6 +26,7 @@ folders <- folders %>%
   filter(grepl("sample", folder_path)) 
 
 for (i in 1:nrow(folders)) {
+  survey_id <- basename(folders$folder_path[i])
   files <- list.files(folders$folder_path[i])
   rgb_validated <- files[grepl('_processed.csv|_processed_transposedRGB.csv', files)] 
   if(length(rgb_validated) == 0) next
@@ -44,7 +45,7 @@ for (i in 1:nrow(folders)) {
       mutate(detection_file = rgb_validated[j]) %>%
       mutate(flight = str_extract(image_name, "fl[0-9][0-9]")) %>%
       mutate(camera_view = gsub("_", "", str_extract(image_name, "_[A-Z]_"))) %>%
-      mutate(detection_id = paste("surv_pv_gla", year, str_extract(image_name, "fl[0-9][0-9]"), gsub("_", "", str_extract(image_name, "_[A-Z]_")), detection, sep = "_")) %>%
+      mutate(detection_id = paste(survey_id, year, str_extract(image_name, "fl[0-9][0-9]"), gsub("_", "", str_extract(image_name, "_[A-Z]_")), detection, sep = "_")) %>%
       select("id", "detection", "image_name", "frame_number", "bound_left", "bound_top", "bound_right", "bound_bottom", "score", "length", "detection_type", "type_score", 
              "flight", "camera_view", "detection_id", "detection_file",)
     
