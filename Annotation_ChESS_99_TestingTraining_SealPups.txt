@@ -1,0 +1,77 @@
+--IR TRAINING
+CREATE OR REPLACE VIEW surv_chess.annotations_pup_training_ir AS
+SELECT (row_number() OVER (ORDER BY unfilt_image, p.hotspot_id) - 1)::integer AS detection, unfilt_image AS image_name, (DENSE_RANK() OVER (ORDER BY unfilt_image) - 1)::integer AS frame_number, 
+	thumb_left, thumb_top, thumb_right, thumb_bottom, 1 AS score, 0 AS length, 
+	species_id AS detection_type, 1 AS type_score, '(trk-atr) ' || p.hotspot_id as detection_id
+FROM surv_chess.tbl_process p
+INNER JOIN surv_chess.tbl_unfilt u ON p.process_dt_c = u.unfilt_dt
+WHERE (age_class = 'Pup' OR age_class = 'Mom-Pup Pair')
+AND species_id LIKE '%Seal'
+AND image_type = 'THERMAL'
+AND unfilt_dt NOT IN (SELECT unfilt_dt FROM surv_chess.tbl_unfilt_detect_images)
+ORDER BY unfilt_image, p.hotspot_id;
+
+CREATE OR REPLACE VIEW surv_chess.annotations_pup_training_ir_images AS
+SELECT DISTINCT image_name, unfilt_image_dir AS image_dir
+FROM surv_chess.annotations_pup_training_ir t
+INNER JOIN surv_chess.tbl_unfilt u ON t.image_name = u.unfilt_image
+ORDER BY image_name;
+
+
+--IR TESTING
+CREATE OR REPLACE VIEW surv_chess.annotations_pup_testing_ir AS
+SELECT (row_number() OVER (ORDER BY unfilt_image, p.hotspot_id) - 1)::integer AS detection, unfilt_image AS image_name, (DENSE_RANK() OVER (ORDER BY unfilt_image) - 1)::integer AS frame_number, 
+	thumb_left, thumb_top, thumb_right, thumb_bottom, 1 AS score, 0 AS length, 
+	species_id AS detection_type, 1 AS type_score, '(trk-atr) ' || p.hotspot_id as detection_id
+FROM surv_chess.tbl_process p
+INNER JOIN surv_chess.tbl_unfilt u ON p.process_dt_c = u.unfilt_dt
+WHERE (age_class = 'Pup' OR age_class = 'Mom-Pup Pair')
+AND species_id LIKE '%Seal'
+AND image_type = 'THERMAL'
+AND unfilt_dt IN (SELECT unfilt_dt FROM surv_chess.tbl_unfilt_detect_images)
+ORDER BY unfilt_image, p.hotspot_id;
+
+CREATE OR REPLACE VIEW surv_chess.annotations_pup_testing_ir_images AS
+SELECT DISTINCT image_name, unfilt_image_dir AS image_dir
+FROM surv_chess.annotations_pup_testing_ir t
+INNER JOIN surv_chess.tbl_unfilt u ON t.image_name = u.unfilt_image
+ORDER BY image_name;
+
+
+--RGB TRAINING
+CREATE OR REPLACE VIEW surv_chess.annotations_pup_training_rgb AS
+SELECT (row_number() OVER (ORDER BY unfilt_image, p.hotspot_id) - 1)::integer AS detection, unfilt_image AS image_name, (DENSE_RANK() OVER (ORDER BY unfilt_image) - 1)::integer AS frame_number, 
+	thumb_left, thumb_top, thumb_right, thumb_bottom, 1 AS score, 0 AS length, 
+	species_id AS detection_type, 1 AS type_score, '(trk-atr) ' || p.hotspot_id as detection_id
+FROM surv_chess.tbl_process p
+INNER JOIN surv_chess.tbl_unfilt u ON p.process_dt_c = u.unfilt_dt
+WHERE (age_class = 'Pup' OR age_class = 'Mom-Pup Pair')
+AND species_id LIKE '%Seal'
+AND image_type = 'COLOR'
+AND unfilt_dt NOT IN (SELECT unfilt_dt FROM surv_chess.tbl_unfilt_detect_images)
+ORDER BY unfilt_image, p.hotspot_id;
+
+CREATE OR REPLACE VIEW surv_chess.annotations_pup_training_rgb_images AS
+SELECT DISTINCT image_name, unfilt_image_dir AS image_dir
+FROM surv_chess.annotations_pup_training_rgb t
+INNER JOIN surv_chess.tbl_unfilt u ON t.image_name = u.unfilt_image
+ORDER BY image_name;
+
+--RGB TESTING
+CREATE OR REPLACE VIEW surv_chess.annotations_pup_testing_rgb AS
+SELECT (row_number() OVER (ORDER BY unfilt_image, p.hotspot_id) - 1)::integer AS detection, unfilt_image AS image_name, (DENSE_RANK() OVER (ORDER BY unfilt_image) - 1)::integer AS frame_number, 
+	thumb_left, thumb_top, thumb_right, thumb_bottom, 1 AS score, 0 AS length, 
+	species_id AS detection_type, 1 AS type_score, '(trk-atr) ' || p.hotspot_id as detection_id
+FROM surv_chess.tbl_process p
+INNER JOIN surv_chess.tbl_unfilt u ON p.process_dt_c = u.unfilt_dt
+WHERE (age_class = 'Pup' OR age_class = 'Mom-Pup Pair')
+AND species_id LIKE '%Seal'
+AND image_type = 'COLOR'
+AND unfilt_dt NOT IN (SELECT unfilt_dt FROM surv_chess.tbl_unfilt_detect_images)
+ORDER BY unfilt_image, p.hotspot_id;
+
+CREATE OR REPLACE VIEW surv_chess.annotations_pup_testing_rgb_images AS
+SELECT DISTINCT image_name, unfilt_image_dir AS image_dir
+FROM surv_chess.annotations_pup_testing_rgb t
+INNER JOIN surv_chess.tbl_unfilt u ON t.image_name = u.unfilt_image
+ORDER BY image_name;

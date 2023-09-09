@@ -1,0 +1,70 @@
+--IR TRAINING
+CREATE OR REPLACE VIEW surv_polar_bear.annotations_pup_training_ir AS
+SELECT (row_number() OVER (ORDER BY d.image_name, d.detection_id) - 1)::integer AS detection, d.image_name, (DENSE_RANK() OVER (ORDER BY d.image_name) - 1)::integer AS frame_number, d.bound_left, d.bound_top, d.bound_right, d.bound_bottom, d.score, d.length, 
+	d.detection_type, d.type_score, '(trk-atr) ' || d.detection_id as detection_id
+FROM surv_polar_bear.tbl_detections_processed_ir d
+INNER JOIN surv_polar_bear.tbl_detections_processed_rgb r USING (detection_id)
+INNER JOIN surv_polar_bear.tbl_images i ON i.image_name = d.image_name
+INNER JOIN surv_polar_bear.geo_images_meta m ON m.flight = i.flight AND m.camera_view = i.camera_view AND m.dt = i.dt
+WHERE r.detection_type LIKE '%pup'
+AND d.flight <> 'fl07'
+ORDER BY image_name, detection_id;
+
+CREATE OR REPLACE VIEW surv_polar_bear.annotations_pup_training_ir_images AS
+SELECT DISTINCT image_name, image_dir
+FROM surv_polar_bear.annotations_pup_training_ir
+INNER JOIN surv_polar_bear.tbl_images USING (image_name)
+ORDER BY image_name;
+
+--IR TESTING
+CREATE OR REPLACE VIEW surv_polar_bear.annotations_pup_testing_ir AS
+SELECT (row_number() OVER (ORDER BY d.image_name, d.detection_id) - 1)::integer AS detection, d.image_name, (DENSE_RANK() OVER (ORDER BY d.image_name) - 1)::integer AS frame_number, 
+	d.bound_left, d.bound_top, d.bound_right, d.bound_bottom, d.score, d.length, d.detection_type, d.type_score, '(trk-atr) ' || d.detection_id as detection_id
+FROM surv_polar_bear.tbl_detections_processed_ir d
+INNER JOIN surv_polar_bear.tbl_detections_processed_rgb r USING (detection_id)
+INNER JOIN surv_polar_bear.tbl_images i ON i.image_name = d.image_name
+INNER JOIN surv_polar_bear.geo_images_meta m ON m.flight = i.flight AND m.camera_view = i.camera_view AND m.dt = i.dt
+WHERE r.detection_type LIKE '%pup'
+AND d.flight = 'fl07'
+ORDER BY image_name, detection_id;
+
+CREATE OR REPLACE VIEW surv_polar_bear.annotations_pup_testing_ir_images AS
+SELECT DISTINCT image_name, image_dir
+FROM surv_polar_bear.annotations_pup_testing_ir
+INNER JOIN surv_polar_bear.tbl_images USING (image_name)
+ORDER BY image_name;
+
+--RGB TRAINING
+CREATE OR REPLACE VIEW surv_polar_bear.annotations_pup_training_rgb AS
+SELECT (row_number() OVER (ORDER BY d.image_name, d.detection_id) - 1)::integer AS detection, d.image_name, (DENSE_RANK() OVER (ORDER BY d.image_name) - 1)::integer AS frame_number, d.bound_left, d.bound_top, d.bound_right, d.bound_bottom, d.score, d.length, 
+	d.detection_type, d.type_score, '(trk-atr) ' || d.detection_id as detection_id
+FROM surv_polar_bear.tbl_detections_processed_rgb d
+INNER JOIN surv_polar_bear.tbl_images i ON i.image_name = d.image_name
+INNER JOIN surv_polar_bear.geo_images_meta m ON m.flight = i.flight AND m.camera_view = i.camera_view AND m.dt = i.dt
+WHERE detection_type LIKE '%pup'
+AND d.flight <> 'fl07'
+ORDER BY image_name, detection_id;
+
+CREATE OR REPLACE VIEW surv_polar_bear.annotations_pup_training_rgb_images AS
+SELECT DISTINCT image_name, image_dir
+FROM surv_polar_bear.annotations_pup_training_rgb
+INNER JOIN surv_polar_bear.tbl_images USING (image_name)
+ORDER BY image_name;
+
+--RGB TESTING
+CREATE OR REPLACE VIEW surv_polar_bear.annotations_pup_testing_rgb AS
+SELECT (row_number() OVER (ORDER BY d.image_name, d.detection_id) - 1)::integer AS detection, d.image_name, (DENSE_RANK() OVER (ORDER BY d.image_name) - 1)::integer AS frame_number, d.bound_left, d.bound_top, d.bound_right, d.bound_bottom, d.score, d.length, 
+	d.detection_type, d.type_score, '(trk-atr) ' || d.detection_id as detection_id
+FROM surv_polar_bear.tbl_detections_processed_rgb d
+INNER JOIN surv_polar_bear.tbl_images i ON i.image_name = d.image_name
+INNER JOIN surv_polar_bear.geo_images_meta m ON m.flight = i.flight AND m.camera_view = i.camera_view AND m.dt = i.dt
+WHERE detection_type LIKE '%pup'
+AND d.flight = 'fl07'
+ORDER BY image_name, detection_id;
+
+CREATE OR REPLACE VIEW surv_polar_bear.annotations_pup_testing_rgb_images AS
+SELECT DISTINCT image_name, image_dir
+FROM surv_polar_bear.annotations_pup_testing_rgb
+INNER JOIN surv_polar_bear.tbl_images USING (image_name)
+ORDER BY image_name;
+

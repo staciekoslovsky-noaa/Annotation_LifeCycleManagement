@@ -1,0 +1,106 @@
+--IR TRAINING
+CREATE OR REPLACE VIEW surv_jobss.annotations_pup_training_ir AS
+SELECT (row_number() OVER (ORDER BY d.image_name, d.detection_id) - 1)::integer AS detection, d.image_name, (DENSE_RANK() OVER (ORDER BY d.image_name) - 1)::integer AS frame_number, d.bound_left, d.bound_top, d.bound_right, d.bound_bottom, d.score, d.length, 
+	d.detection_type, d.type_score, '(trk-atr) ' || d.detection_id as detection_id
+FROM surv_jobss.tbl_detections_processed_ir d
+INNER JOIN surv_jobss.tbl_detections_processed_rgb r USING (detection_id)
+INNER JOIN surv_jobss.tbl_images i ON i.image_name = d.image_name
+INNER JOIN surv_jobss.geo_images_meta m ON m.image_group = i.image_group
+WHERE r.age_class = 'pup'
+AND rgb_manualreview = 'N'
+ORDER BY image_name, detection_id;
+
+CREATE OR REPLACE VIEW surv_jobss.annotations_pup_training_ir_images AS
+SELECT DISTINCT image_name, image_dir
+FROM surv_jobss.annotations_pup_training_ir
+INNER JOIN surv_jobss.tbl_images USING (image_name)
+ORDER BY image_name;
+
+--IR TESTING
+CREATE OR REPLACE VIEW surv_jobss.annotations_pup_testing_ir AS
+SELECT (row_number() OVER (ORDER BY d.image_name, d.detection_id) - 1)::integer AS detection, d.image_name, (DENSE_RANK() OVER (ORDER BY d.image_name) - 1)::integer AS frame_number, d.bound_left, d.bound_top, d.bound_right, d.bound_bottom, d.score, d.length, 
+	d.detection_type, d.type_score, '(trk-atr) ' || d.detection_id as detection_id
+FROM surv_jobss.tbl_detections_processed_ir d
+INNER JOIN surv_jobss.tbl_detections_processed_rgb r USING (detection_id)
+INNER JOIN surv_jobss.tbl_images i ON i.image_name = d.image_name
+INNER JOIN surv_jobss.geo_images_meta m ON m.image_group = i.image_group
+WHERE r.age_class = 'pup'
+AND rgb_manualreview = 'Y'
+ORDER BY image_name, detection_id;
+
+CREATE OR REPLACE VIEW surv_jobss.annotations_pup_testing_ir_images AS
+SELECT DISTINCT image_name, image_dir
+FROM surv_jobss.annotations_pup_testing_ir
+INNER JOIN surv_jobss.tbl_images USING (image_name)
+ORDER BY image_name;
+
+--RGB TRAINING
+CREATE OR REPLACE VIEW surv_jobss.annotations_pup_training_rgb AS
+SELECT (row_number() OVER (ORDER BY d.image_name, d.detection_id) - 1)::integer AS detection, d.image_name, (DENSE_RANK() OVER (ORDER BY d.image_name) - 1)::integer AS frame_number, d.bound_left, d.bound_top, d.bound_right, d.bound_bottom, d.score, d.length, 
+	d.detection_type, d.type_score, '(trk-atr) ' || d.detection_id as detection_id
+FROM surv_jobss.tbl_detections_processed_rgb d
+INNER JOIN surv_jobss.tbl_images i ON i.image_name = d.image_name
+INNER JOIN surv_jobss.geo_images_meta m ON m.image_group = i.image_group
+WHERE age_class = 'pup'
+AND rgb_manualreview = 'N'
+ORDER BY image_name, detection_id;
+
+CREATE OR REPLACE VIEW surv_jobss.annotations_pup_training_rgb_images AS
+SELECT DISTINCT image_name, image_dir
+FROM surv_jobss.annotations_pup_training_rgb
+INNER JOIN surv_jobss.tbl_images USING (image_name)
+ORDER BY image_name;
+
+--RGB TESTING
+CREATE OR REPLACE VIEW surv_jobss.annotations_pup_testing_rgb AS
+SELECT (row_number() OVER (ORDER BY d.image_name, d.detection_id) - 1)::integer AS detection, d.image_name, (DENSE_RANK() OVER (ORDER BY d.image_name) - 1)::integer AS frame_number, d.bound_left, d.bound_top, d.bound_right, d.bound_bottom, d.score, d.length, 
+	d.detection_type, d.type_score, '(trk-atr) ' || d.detection_id as detection_id
+FROM surv_jobss.tbl_detections_processed_rgb d
+INNER JOIN surv_jobss.tbl_images i ON i.image_name = d.image_name
+INNER JOIN surv_jobss.geo_images_meta m ON m.image_group = i.image_group
+WHERE age_class = 'pup'
+AND rgb_manualreview = 'Y'
+ORDER BY image_name, detection_id;
+
+CREATE OR REPLACE VIEW surv_jobss.annotations_pup_testing_rgb_images AS
+SELECT DISTINCT image_name, image_dir
+FROM surv_jobss.annotations_pup_testing_rgb
+INNER JOIN surv_jobss.tbl_images USING (image_name)
+ORDER BY image_name;
+
+--UV TRAINING
+CREATE OR REPLACE VIEW surv_jobss.annotations_pup_training_uv AS
+SELECT (row_number() OVER (ORDER BY d.image_name, d.detection_id) - 1)::integer AS detection, d.image_name, (DENSE_RANK() OVER (ORDER BY d.image_name) - 1)::integer AS frame_number, d.bound_left, d.bound_top, d.bound_right, d.bound_bottom, r.score, r.length, 
+	r.detection_type, r.type_score, '(trk-atr) ' || d.detection_id as detection_id, '(trk-atr) ' || bear_id as bear_id
+FROM surv_jobss.tbl_detections_processed_uv d
+INNER JOIN surv_jobss.tbl_detections_processed_rgb r USING (detection_id)
+INNER JOIN surv_jobss.tbl_images i ON i.image_name = d.image_name
+INNER JOIN surv_jobss.geo_images_meta m ON m.image_group = i.image_group
+WHERE age_class = 'pup'
+AND rgb_manualreview = 'N'
+ORDER BY image_name, detection_id;
+
+CREATE OR REPLACE VIEW surv_jobss.annotations_pup_training_uv_images AS
+SELECT DISTINCT image_name, image_dir
+FROM surv_jobss.annotations_pup_training_uv
+INNER JOIN surv_jobss.tbl_images USING (image_name)
+ORDER BY image_name;
+
+--UV TESTING
+CREATE OR REPLACE VIEW surv_jobss.annotations_pup_testing_uv AS
+SELECT (row_number() OVER (ORDER BY d.image_name, d.detection_id) - 1)::integer AS detection, d.image_name, (DENSE_RANK() OVER (ORDER BY d.image_name) - 1)::integer AS frame_number, d.bound_left, d.bound_top, d.bound_right, d.bound_bottom, r.score, r.length, 
+	r.detection_type, r.type_score, '(trk-atr) ' || d.detection_id as detection_id, '(trk-atr) ' || bear_id as bear_id
+FROM surv_jobss.tbl_detections_processed_uv d
+INNER JOIN surv_jobss.tbl_detections_processed_rgb r USING (detection_id)
+INNER JOIN surv_jobss.tbl_images i ON i.image_name = d.image_name
+INNER JOIN surv_jobss.geo_images_meta m ON m.image_group = i.image_group
+WHERE age_class = 'pup'
+AND rgb_manualreview = 'Y'
+ORDER BY image_name, detection_id;
+
+CREATE OR REPLACE VIEW surv_jobss.annotations_pup_testing_uv_images AS
+SELECT DISTINCT image_name, image_dir
+FROM surv_jobss.annotations_pup_testing_uv
+INNER JOIN surv_jobss.tbl_images USING (image_name)
+ORDER BY image_name;
+
