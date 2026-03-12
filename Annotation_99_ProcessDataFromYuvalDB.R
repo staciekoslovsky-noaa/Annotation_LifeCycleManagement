@@ -1,5 +1,5 @@
 # Process annotation data from Yuval for import into pep DB
-# S. Hardy
+# S. Koslovsky
 
 # Create functions -----------------------------------------------
 # Function to install packages needed
@@ -19,99 +19,183 @@ install_pkg("snakecase")
 
 # Run code -------------------------------------------------------
 # Set working directory
-wd <- "C:/Users/Stacie.Hardy/Work/Work/Projects/AS__Annotations/Data/YuvalDB_ParseFromSQL_20220707"
+wd <- "C:/Users/Stacie.Hardy/Work/SMK/Projects/AS__Annotations/Data/YuvalDB_ParseFromSQL_20220707"
 setwd(wd)
 
-anno_annotation <- read.table(file = 'annotation_data.annotation.tsv', sep = '\t', header = TRUE) %>%
+# --- Process annotation data ---
+# Load data for creating annotation datasets
+anno_annotation <- read.table(file = 'annotation_data.annotation.tsv', sep = '\t', header = TRUE)
+anno_annotation <- anno_annotation %>%
   rename(rgb_event_key = eo_event_key)
+
 anno_boxes <- read.table(file = 'annotation_data.bounding_boxes.tsv', sep = '\t', header = TRUE)
-anno_species <- read.table(file = 'annotation_data.species.tsv', sep = '\t', header = TRUE) %>%
-  rename(species = name,
-         rgb_event_key = eo_event_key) %>%
+
+anno_species <- read.table(file = 'annotation_data.species.tsv', sep = '\t', header = TRUE) 
+anno_species <- anno_species %>%
+  rename(species = name) %>%
   mutate(species = gsub("UNK", "unknown", species)) %>%
   mutate(species = snakecase::to_snake_case(species))
-anno_train_test_valid <- read.table(file = 'annotation_data.train_test_valid.tsv', sep = '\t', header = TRUE) %>%
-  select(ir_event_key, eo_event_key, type) %>%
-  rename(image_used_for = type,
-         rgb_event_key = eo_event_key)
-
-ir_uncertain_background <- read.table(file = 'manual_review.ir_uncertain_background.tsv', sep = '\t', header = TRUE)
-ir_verified_background <- read.table(file = 'manual_review.ir_verified_background.tsv', sep = '\t', header = TRUE)
-ir_with_error <- read.table(file = 'manual_review.ir_with_error.tsv', sep = '\t', header = TRUE)
-ir_without_errors <- read.table(file = 'manual_review.ir_without_errors.tsv', sep = '\t', header = TRUE)
-
-surv_camera <- read.table(file = 'survey_data.camera.tsv', sep = '\t', header = TRUE) %>%
-  rename(camera_view = cam_name,
-         camera_id = id)
-surv_flight <- read.table(file = 'survey_data.flight.tsv', sep = '\t', header = TRUE) %>%
-  rename(flight = flight_name, 
-         flight_id = id) %>%
-  mutate(flight = tolower(flight))
-surv_survey <- read.table(file = 'survey_data.survey.tsv', sep = '\t', header = TRUE) %>%
-  rename(survey = name,
-         survey_id = id)
 
 surv_image_eo <- read.table(file = 'survey_data.eo_image.tsv', sep = '\t', header = TRUE) %>%
   rename_with( ~ paste0("rgb_", .x))
 surv_image_ir <- read.table(file = 'survey_data.ir_image.tsv', sep = '\t', header = TRUE) %>%
   rename_with( ~ paste0("ir_", .x))
 
-
-# Join and clean up files annotation + survey files
+# --- Create IR annotation dataset for import ---
 annotations_ir <- anno_annotation %>%
   mutate(age_class = ifelse(age_class == '\\N', "adult", age_class)) %>%
+  filter(ir_event_key != '\\N') %>%
   mutate(ir_box_id = as.integer(ifelse(ir_box_id == '\\N', "-99", ir_box_id))) %>%
   # Join and process species data
   left_join(anno_species, by = c("species_id" = "id")) %>%
   # Join and process IR bounding box data
   left_join(anno_boxes, by = c("ir_box_id" = "id")) %>%
-  rename(ir_bound_top = x1,
-         ir_bound_bottom = x2,
-         ir_bound_left = y1,
-         ir_bound_right = y2,
-         ir_confidence = confidence,
-         ir_reviewer = worker_id,
-         ir_job = job_id) %>%
-  # Join train-test-valid data
-  select(-rgb_event_key) %>%
-  filter(ir_event_key != '\\N') %>%
-  left_join(anno_train_test_valid, by = c("ir_event_key")) 
+  rename(detection = id,
+    detection_type = species,
+    bound_top = x1,
+    bound_bottom = x2,
+    bound_left = y1,
+    bound_right = y2,
+    confidence = confidence,
+    reviewer = worker_id,
+    job = job_id) %>%
+  # Join image data
+  left_join(surv_image_ir, by = "ir_event_key") %>%
+  rename(image_name = ir_filename) %>%
+  select(detection, image_name, bound_left, bound_top, bound_right, bound_bottom,
+    detection_type, reviewer, job) %>%
+  filter(job != "Original_Beafort_19_job" & job != "kotz_manual_review")
 
+# Create RGB annotation dataset for import
 annotations_rgb <- anno_annotation %>%
   mutate(age_class = ifelse(age_class == '\\N', "adult", age_class)) %>%
-  mutate(ir_box_id = as.integer(ifelse(ir_box_id == '\\N', "-99", ir_box_id))) %>%
+  filter(rgb_event_key != '\\N') %>%
+  mutate(rgb_box_id = as.integer(ifelse(eo_box_id == '\\N', "-99", eo_box_id))) %>%
   # Join and process species data
   left_join(anno_species, by = c("species_id" = "id")) %>%
-  # Join and process RGB bounding box data
+  # Join and process IR bounding box data
   left_join(anno_boxes, by = c("eo_box_id" = "id")) %>%
-  rename(rgb_event_key = eo_event_key,
-         rgb_box_id = eo_box_id, 
-         rgb_bound_top = x1,
-         rgb_bound_bottom = x2,
-         rgb_bound_left = y1,
-         rgb_bound_right = y2,
-         rgb_confidence = confidence,
-         rgb_reviewer = worker_id,
-         rgb_job = job_id) %>%
-  # Join train-test-valid data
-  select(-ir_event_key) %>%
-  filter(rgb_event_key != '\\N') %>%
-  left_join(anno_train_test_valid, by = "rgb_event_key")
+  rename(detection = id,
+    detection_type = species,
+    bound_top = x1,
+    bound_bottom = x2,
+    bound_left = y1,
+    bound_right = y2,
+    confidence = confidence,
+    reviewer = worker_id,
+    job = job_id) %>%
+  # Join image data
+  left_join(surv_image_eo, by = "rgb_event_key") %>%
+  rename(image_name = rgb_filename) %>%
+  select(detection, image_name, bound_left, bound_top, bound_right, bound_bottom,
+    detection_type, reviewer, job) %>%
+  filter(job != "Original_Beafort_19_job" & job != "kotz_manual_review")
 
-data_ir <- surv_survey %>%
-  left_join(surv_flight, by = "survey_id") %>%
-  left_join(surv_camera, by = "flight_id") %>%
-  left_join(surv_image_ir, by = c("camera_id" = "ir_camera_id")) %>%
-  select(-survey_id, -flight_id, -camera_id) %>%
-  full_join(annotations_ir, by = "ir_event_key")
+rm(anno_annotation, anno_boxes, anno_species)
+### Want to calculate flight, camera_view, dt fields? (probably should do this!)
 
-data_rgb <- surv_survey %>%
-  left_join(surv_flight, by = "survey_id") %>%
-  left_join(surv_camera, by = "flight_id") %>%
-  left_join(surv_image_eo, by = c("camera_id" = "rgb_camera_id")) %>%
-  select(-survey_id, -flight_id, -camera_id) %>%
-  full_join(annotations_rgb, by = "rgb_event_key")
+# --- Process image data ---
+# Load data for generating lists of images and how they were used (will update surv_chess.tbl_iamges_unfilt)
+ir_verified_background <- read.table(file = 'manual_review.ir_verified_background.tsv', sep = '\t', header = TRUE) %>%
+  left_join(surv_image_ir, by = "ir_event_key") %>%
+  select(ir_filename) %>%
+  rename(image_name = ir_filename) %>%
+  mutate(ml_imagestatus = 'background')
 
-write.csv(data_ir, "Annotations_IR_FromYuval_20220725.csv", row.names = FALSE)
-write.csv(data_rgb, "Annotations_RGB_FromYuval_20220725.csv", row.names = FALSE)
-            
+anno_train_test_valid <- read.table(file = 'annotation_data.train_test_valid.tsv', sep = '\t', header = TRUE) 
+anno_train_test_valid <- anno_train_test_valid %>%
+  rename(ml_imagestatus = type,
+    rgb_event_key = eo_event_key) %>%
+  left_join(surv_image_eo, by = "rgb_event_key") %>%
+  left_join(surv_image_ir, by = "ir_event_key") %>%
+  select(rgb_filename, ir_filename, ml_imagestatus) 
+
+anno_train_test_valid_rgb <- anno_train_test_valid %>% 
+  select(rgb_filename, ml_imagestatus) %>% 
+  rename(image_name = rgb_filename)
+
+anno_train_test_valid_ir <- anno_train_test_valid %>% 
+  select(ir_filename, ml_imagestatus) %>% 
+  rename(image_name = ir_filename) %>%
+  anti_join(ir_verified_background, by = "image_name")
+
+# Create image use dataset for import
+frames <- ir_verified_background %>%
+  rbind(anno_train_test_valid_rgb) %>%
+  rbind(anno_train_test_valid_ir) %>%
+  filter(!is.na(image_name)) %>%
+  mutate(image_name = sub("^[0-9][0-9][0-9]_", "", image_name)) %>%
+  mutate(project = substr(image_name, 1, 8)) %>%
+  mutate(image_type = ifelse(
+    grepl("ir", image_name), 
+    "ir_image",
+    ifelse(
+      grepl("rgb", image_name), 
+      "rgb_image", 
+      ifelse(
+        grepl("COLOR", image_name), 
+        "rgb_image",
+        ifelse(
+          grepl("THERM", image_name), 
+          "ir_image", 
+          "help"
+    ))))) %>%
+  filter(project != 'CHESS_ru') %>% # not sure what these data are, so not keeping them! :/
+  mutate(image_name = sub("rgb.jpg", "rgb.tif", image_name)) # for test_kotz and polar_bear data (face palm)
+
+frames %>%
+  group_by(project) %>% 
+  summarize(count = n())
+
+rm(ir_verified_background, anno_train_test_valid, anno_train_test_valid_rgb, anno_train_test_valid_ir, surv_image_eo, surv_image_ir)
+## Code working through this step
+
+# --- Process data to DB
+# Connect to DB
+con <- RPostgreSQL::dbConnect(PostgreSQL(), 
+                              dbname = Sys.getenv("pep_db"), 
+                              host = Sys.getenv("pep_ip"), 
+                              user = Sys.getenv("pep_admin"), 
+                              password = Sys.getenv("admin_pw"))
+
+# Process ChESS IR and RGB annotations to DB
+RPostgreSQL::dbWriteTable(con, c("surv_chess", "tbl_detections_modeldev_ir"), annotations_ir, overwrite = TRUE, row.names = FALSE)
+RPostgreSQL::dbWriteTable(con, c("surv_chess", "tbl_detections_modeldev_rgb"), annotations_rgb, overwrite = TRUE, row.names = FALSE)
+
+# Update ml_imagestatus fields in DB based on this list of images
+## Write data to annotations.tbl_temp
+RPostgreSQL::dbWriteTable(con, c("annotations", "temp"), frames, overwrite = TRUE, row.names = FALSE)
+
+## surv_chess.tbl_images_unfilt
+RPostgreSQL::dbSendQuery(con, "UPDATE surv_chess.tbl_images_unfilt SET ml_imagestatus = NULL")
+RPostgreSQL::dbSendQuery(con, 
+  "UPDATE surv_chess.tbl_images_unfilt i
+  SET ml_imagestatus = t.ml_imagestatus 
+  FROM annotations.temp t
+  WHERE t.image_name = i.unfilt_image;")
+
+
+## surv_polar_bear.tbl_images
+RPostgreSQL::dbSendQuery(con, "UPDATE surv_polar_bear.tbl_images SET ml_imagestatus = NULL")
+RPostgreSQL::dbSendQuery(
+  con, 
+  "UPDATE surv_polar_bear.tbl_images i
+  SET ml_imagestatus = t.ml_imagestatus 
+  FROM annotations.temp t
+  WHERE t.image_name = i.image_name;")
+
+## surv_test_kotz.tbl_images
+RPostgreSQL::dbSendQuery(con, "UPDATE surv_test_kotz.tbl_images SET ml_imagestatus = NULL")
+RPostgreSQL::dbSendQuery(
+  con, 
+  "UPDATE surv_test_kotz.tbl_images i
+  SET ml_imagestatus = t.ml_imagestatus 
+  FROM annotations.temp t
+  WHERE t.image_name = i.image_name;")
+
+## Delete data from annotations.tbl_temp
+RPostgreSQL::dbSendQuery(con, "DROP TABLE IF EXISTS annotations.temp")
+
+# Disconnect from DB
+RPostgreSQL::dbDisconnect(con)
+rm(con)
